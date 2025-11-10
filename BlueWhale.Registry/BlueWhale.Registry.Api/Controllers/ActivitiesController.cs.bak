@@ -1,0 +1,277 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using BlueWhale.Registry.Domain.Entities;
+using BlueWhale.Registry.Domain.Interfaces;
+using BlueWhale.Registry.Infrastructure.Persistence;
+
+namespace BlueWhale.Registry.Api.Controllers;
+
+[ApiController]
+[Route("v1/api/[controller]")]
+[Authorize]
+public class ActivitiesController : ControllerBase
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ActivitiesController> _logger;
+
+    public ActivitiesController(
+        IUnitOfWork unitOfWork,
+        ILogger<ActivitiesController> logger)
+    {
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? action,
+        [FromQuery] string? username,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (pageNumber < 1 || pageSize < 1 || pageSize > 100)
+        {
+            return UnprocessableEntity(new { error = "Invalid pagination parameters" });
+        }
+
+        try
+        {
+            var activityRepository = _unitOfWork.GetRepository<ActivityLog>();
+            var activities = (await activityRepository.GetAllAsync()).AsEnumerable();
+
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(action))
+            {
+                activities = activities.Where(a => a.Action.Contains(action, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (startDate.HasValue)
+            {
+                activities = activities.Where(a => a.Timestamp >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                activities = activities.Where(a => a.Timestamp <= endDate.Value.AddDays(1));
+            }
+
+            // Sort by timestamp descending
+            activities = activities.OrderByDescending(a => a.Timestamp);
+
+            // Pagination
+            var totalCount = activities.Count();
+            var paginatedActivities = activities
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var activityDtos = paginatedActivities.Select(a => new ActivityDto
+            {
+                Id = a.Id,
+                Action = a.Action,
+                ResourceName = a.ResourceName,
+                Success = a.Success,
+                Details = a.Details,
+                Username = a.User?.Username ?? "Unknown",
+                IpAddress = a.IpAddress,
+                Timestamp = a.Timestamp
+            }).ToList();
+
+            return Ok(new PagedResult<ActivityDto>
+            {
+                Data = activityDtos,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving activities");
+            return StatusCode(500, new { error = "An error occurred while retrieving activities" });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        try
+        {
+            var activityRepository = _unitOfWork.GetRepository<ActivityLog>();
+            var activities = (await activityRepository.GetAllAsync()).ToList();
+            var activity = activities.FirstOrDefault(a => a.Id == id);
+
+            if (activity == null)
+            {
+                return NotFound(new { error = "Activity not found" });
+            }
+
+            return Ok(new ActivityDetailDto
+            {
+                Id = activity.Id,
+                Action = activity.Action,
+                ResourceName = activity.ResourceName,
+                Success = activity.Success,
+                Details = activity.Details,
+                Username = activity.User?.Username ?? "Unknown",
+                IpAddress = activity.IpAddress,
+                Timestamp = activity.Timestamp
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error retrieving activity {id}");
+            return StatusCode(500, new { error = "An error occurred while retrieving the activity" });
+        }
+    }
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary()
+    {
+        try
+        {
+            var activityRepository = _unitOfWork.GetRepository<ActivityLog>();
+            var activities = (await activityRepository.GetAllAsync()).ToList();
+
+            var now = DateTime.UtcNow;
+            var last24Hours = activities.Where(a => a.Timestamp >= now.AddDays(-1)).ToList();
+            var last7Days = activities.Where(a => a.Timestamp >= now.AddDays(-7)).ToList();
+
+            var summary = new ActivitySummaryDto
+            {
+                TotalActivities = activities.Count,
+                Last24Hours = last24Hours.Count,
+                Last7Days = last7Days.Count,
+                SuccessfulOperations = activities.Count(a => a.Success),
+                FailedOperations = activities.Count(a => !a.Success),
+                TopActions = activities
+                    .GroupBy(a => a.Action)
+                    .OrderByDescending(g => g.Count())
+                    .Take(5)
+                    .Select(g => new ActionCountDto
+                    {
+                        Action = g.Key,
+                        Count = g.Count()
+                    })
+                    .ToList()
+            };
+
+            return Ok(summary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving activity summary");
+            return StatusCode(500, new { error = "An error occurred while retrieving the summary" });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            var activityRepository = _unitOfWork.GetRepository<ActivityLog>();
+            var activities = (await activityRepository.GetAllAsync()).ToList();
+            var activity = activities.FirstOrDefault(a => a.Id == id);
+
+            if (activity == null)
+            {
+                return NotFound(new { error = "Activity not found" });
+            }
+
+            await activityRepository.DeleteAsync(activity);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"Activity deleted: {activity.Action}");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting activity {id}");
+            return StatusCode(500, new { error = "An error occurred while deleting the activity" });
+        }
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> DeleteOldActivities([FromQuery] int daysOld = 30)
+    {
+        try
+        {
+            var activityRepository = _unitOfWork.GetRepository<ActivityLog>();
+            var activities = (await activityRepository.GetAllAsync()).ToList();
+
+            var cutoffDate = DateTime.UtcNow.AddDays(-daysOld);
+            var oldActivities = activities.Where(a => a.Timestamp < cutoffDate).ToList();
+
+            foreach (var activity in oldActivities)
+            {
+                await activityRepository.DeleteAsync(activity);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"Deleted {oldActivities.Count} old activities");
+
+            return Ok(new { deleted = oldActivities.Count, message = $"Deleted {oldActivities.Count} activities older than {daysOld} days" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting old activities");
+            return StatusCode(500, new { error = "An error occurred while deleting old activities" });
+        }
+    }
+}
+
+// DTOs
+public class ActivityDto
+{
+    public Guid Id { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? ResourceName { get; set; }
+    public bool Success { get; set; }
+    public string? Details { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
+    public DateTime Timestamp { get; set; }
+}
+
+public class ActivityDetailDto
+{
+    public Guid Id { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? ResourceName { get; set; }
+    public bool Success { get; set; }
+    public string? Details { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? IpAddress { get; set; }
+    public DateTime Timestamp { get; set; }
+}
+
+public class ActivitySummaryDto
+{
+    public int TotalActivities { get; set; }
+    public int Last24Hours { get; set; }
+    public int Last7Days { get; set; }
+    public int SuccessfulOperations { get; set; }
+    public int FailedOperations { get; set; }
+    public List<ActionCountDto> TopActions { get; set; } = new();
+}
+
+public class ActionCountDto
+{
+    public string Action { get; set; } = string.Empty;
+    public int Count { get; set; }
+}
+
+public class PagedResult<T>
+{
+    public List<T> Data { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
+}

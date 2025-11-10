@@ -1,0 +1,297 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using BlueWhale.Registry.Domain.Entities;
+using BlueWhale.Registry.Domain.Interfaces;
+using BlueWhale.Registry.Infrastructure.Persistence;
+using BCrypt.Net;
+
+namespace BlueWhale.Registry.Api.Controllers;
+
+[ApiController]
+[Route("v1/api/[controller]")]
+[Authorize]
+public class UsersController : ControllerBase
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<UsersController> _logger;
+
+    public UsersController(
+        IUnitOfWork unitOfWork,
+        ILogger<UsersController> logger)
+    {
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var users = (await userRepository.GetAllAsync()).ToList();
+
+            var userDtos = users.Select(u => new UserListDto
+            {
+                Id = u.Id,
+                Username = u.Username,
+                Email = u.Email,
+                Role = u.Role.ToString(),
+                CreatedAt = u.CreatedAt,
+                LastLogin = u.LastLogin
+            }).ToList();
+
+            return Ok(userDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving users");
+            return StatusCode(500, new { error = "An error occurred while retrieving users" });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var users = (await userRepository.GetAllAsync()).ToList();
+            var user = users.FirstOrDefault(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            return Ok(new UserDetailDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                CreatedAt = user.CreatedAt,
+                LastLogin = user.LastLogin
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error retrieving user {id}");
+            return StatusCode(500, new { error = "An error occurred while retrieving the user" });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest(new { error = "Username and password are required" });
+        }
+
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var existingUsers = (await userRepository.GetAllAsync()).ToList();
+
+            if (existingUsers.Any(u => u.Username == request.Username))
+            {
+                return BadRequest(new { error = "Username already exists" });
+            }
+
+            var user = new User
+            {
+                Username = request.Username,
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role = Enum.Parse<UserRole>(request.Role ?? "ReadOnly")
+            };
+
+            await userRepository.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"New user created: {user.Username}");
+
+            return CreatedAtAction(nameof(GetById), new { id = user.Id }, new UserDetailDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                CreatedAt = user.CreatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating user");
+            return StatusCode(500, new { error = "An error occurred while creating the user" });
+        }
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserRequest request)
+    {
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var users = (await userRepository.GetAllAsync()).ToList();
+            var user = users.FirstOrDefault(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                user.Email = request.Email;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Role))
+            {
+                user.Role = Enum.Parse<UserRole>(request.Role);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await userRepository.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"User updated: {user.Username}");
+
+            return Ok(new UserDetailDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                CreatedAt = user.CreatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating user {id}");
+            return StatusCode(500, new { error = "An error occurred while updating the user" });
+        }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            // Prevent deletion of the last admin user
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var users = (await userRepository.GetAllAsync()).ToList();
+            
+            var user = users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            var adminCount = users.Count(u => u.Role == UserRole.Admin);
+            if (user.Role == UserRole.Admin && adminCount == 1)
+            {
+                return BadRequest(new { error = "Cannot delete the last admin user" });
+            }
+
+            await userRepository.DeleteAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"User deleted: {user.Username}");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting user {id}");
+            return StatusCode(500, new { error = "An error occurred while deleting the user" });
+        }
+    }
+
+    [HttpGet("{id}/permissions")]
+    public async Task<IActionResult> GetPermissions(Guid id)
+    {
+        try
+        {
+            var userRepository = _unitOfWork.GetRepository<User>();
+            var users = (await userRepository.GetAllAsync()).ToList();
+            var user = users.FirstOrDefault(u => u.Id == id);
+
+            if (user == null)
+            {
+                return NotFound(new { error = "User not found" });
+            }
+
+            var accessControlRepository = _unitOfWork.GetRepository<AccessControl>();
+            var permissions = (await accessControlRepository.GetAllAsync())
+                .Where(ac => ac.UserId == id && ac.IsActive)
+                .ToList();
+
+            var permissionDtos = permissions.Select(p => new PermissionDto
+            {
+                Id = p.Id,
+                RepositoryName = p.RepositoryName,
+                AccessLevel = p.AccessLevel.ToString(),
+                ExpiresAt = p.ExpiresAt
+            }).ToList();
+
+            return Ok(permissionDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error retrieving permissions for user {id}");
+            return StatusCode(500, new { error = "An error occurred while retrieving permissions" });
+        }
+    }
+}
+
+// DTOs
+public class CreateUserRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? Role { get; set; } = "ReadOnly";
+}
+
+public class UpdateUserRequest
+{
+    public string? Email { get; set; }
+    public string? Role { get; set; }
+    public string? NewPassword { get; set; }
+}
+
+public class UserListDto
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastLogin { get; set; }
+}
+
+public class UserDetailDto
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastLogin { get; set; }
+}
+
+public class PermissionDto
+{
+    public Guid Id { get; set; }
+    public string RepositoryName { get; set; } = string.Empty;
+    public string AccessLevel { get; set; } = string.Empty;
+    public DateTime? ExpiresAt { get; set; }
+}

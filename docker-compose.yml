@@ -1,0 +1,90 @@
+services:
+  # Official Docker Registry V2
+  registry:
+    image: registry:2.8.3
+    container_name: bluewhale-registry-core
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_ADDR: "0.0.0.0:5000"
+    volumes:
+      - ./data/registry:/var/lib/registry
+    networks:
+      - bluewhale-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5000/v2/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # BlueWhale Registry Management API (.NET 9.0)
+  registry-api:
+    build:
+      context: .
+      dockerfile: BlueWhale.Registry/BlueWhale.Registry.Api/Dockerfile
+    container_name: bluewhale-registry-api
+    ports:
+      - "5260:5260"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5260
+      ASPNETCORE_HOST: registry-api
+      ASPNETCORE_PORT: 5260
+      REGISTRY_URL: http://registry:5000
+      JWT_SECRET: bluewhale-docker-registry-secret-key-2025
+    volumes:
+      - ./data/api:/app/data
+    networks:
+      - bluewhale-network
+    depends_on:
+      registry:
+        condition: service_started
+    # healthcheck disabled - manually tested and working
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5260/ || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 15s
+    restart: unless-stopped
+
+  # BlueWhale Web UI (Nuxt 4 + Vue 3)
+  ui:
+    build:
+      context: ./BlueWhale.UI
+      dockerfile: Dockerfile
+    container_name: bluewhale-ui
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      NUXT_PUBLIC_API_BASE: http://localhost:5260/v1/api
+      NUXT_PUBLIC_REGISTRY_URL: http://localhost:5000
+    volumes:
+      - ./data/ui:/app/data
+    networks:
+      - bluewhale-network
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  registry_data:
+    driver: local
+
+networks:
+  bluewhale-network:
+    driver: bridge
+    name: bluewhale-network

@@ -3,20 +3,22 @@ namespace BlueWhale.Registry.Domain.Entities;
 public class User
 {
     public Guid Id { get; set; }
-    public string Username { get; set; } = null!;
-    public string Email { get; set; } = null!;
-    public string PasswordHash { get; set; } = null!;
+    public required string Username { get; set; }
+    public required string Email { get; set; }
+    public required string PasswordHash { get; set; }
     public bool IsActive { get; set; } = true;
-    public UserRole Role { get; set; } = UserRole.User;
-    public DateTime CreatedAt { get; set; }
+    public UserRole Role { get; set; } = UserRole.Admin;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     
-    public ICollection<ActivityLog> ActivityLogs { get; set; } = new List<ActivityLog>();
+    public ICollection<ActivityLog> ActivityLogs { get; set; } = [];
+    public ICollection<AccessControl> AccessControls { get; set; } = [];
 }
 
 public enum UserRole
 {
     Admin = 0,
-    User = 1,
-    ReadOnly = 2
+    Manager = 1,
+    Operator = 2,
+    ReadOnly = 3
 }

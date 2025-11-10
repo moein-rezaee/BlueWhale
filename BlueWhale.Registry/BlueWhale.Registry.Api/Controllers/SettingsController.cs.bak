@@ -1,0 +1,314 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using BlueWhale.Registry.Domain.Entities;
+using BlueWhale.Registry.Domain.Interfaces;
+using BlueWhale.Registry.Infrastructure.Persistence;
+
+namespace BlueWhale.Registry.Api.Controllers;
+
+[ApiController]
+[Route("v1/api/[controller]")]
+[Authorize]
+public class SettingsController : ControllerBase
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<SettingsController> _logger;
+
+    public SettingsController(
+        IUnitOfWork unitOfWork,
+        ILogger<SettingsController> logger)
+    {
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] string? category)
+    {
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var settings = (await settingsRepository.GetAllAsync()).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                settings = settings.Where(s => s.Category.ToString() == category);
+            }
+
+            var settingDtos = settings.Select(s => new SettingDto
+            {
+                Id = s.Id,
+                Key = s.Key,
+                Value = s.Value,
+                Category = s.Category.ToString(),
+                Description = s.Description,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList();
+
+            return Ok(settingDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving settings");
+            return StatusCode(500, new { error = "An error occurred while retrieving settings" });
+        }
+    }
+
+    [HttpGet("{key}")]
+    public async Task<IActionResult> GetByKey(string key)
+    {
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var settings = (await settingsRepository.GetAllAsync()).ToList();
+            var setting = settings.FirstOrDefault(s => s.Key == key);
+
+            if (setting == null)
+            {
+                return NotFound(new { error = "Setting not found" });
+            }
+
+            return Ok(new SettingDto
+            {
+                Id = setting.Id,
+                Key = setting.Key,
+                Value = setting.Value,
+                Category = setting.Category.ToString(),
+                Description = setting.Description,
+                CreatedAt = setting.CreatedAt,
+                UpdatedAt = setting.UpdatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error retrieving setting {key}");
+            return StatusCode(500, new { error = "An error occurred while retrieving the setting" });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateSettingRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Key) || string.IsNullOrWhiteSpace(request.Value))
+        {
+            return BadRequest(new { error = "Key and value are required" });
+        }
+
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var existingSettings = (await settingsRepository.GetAllAsync()).ToList();
+
+            if (existingSettings.Any(s => s.Key == request.Key))
+            {
+                return BadRequest(new { error = "Setting key already exists" });
+            }
+
+            var setting = new RegistrySetting
+            {
+                Key = request.Key,
+                Value = request.Value,
+                Category = Enum.Parse<SettingCategory>(request.Category ?? "General"),
+                Description = request.Description
+            };
+
+            await settingsRepository.AddAsync(setting);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"New setting created: {setting.Key}");
+
+            return CreatedAtAction(nameof(GetByKey), new { key = setting.Key }, new SettingDto
+            {
+                Id = setting.Id,
+                Key = setting.Key,
+                Value = setting.Value,
+                Category = setting.Category.ToString(),
+                Description = setting.Description,
+                CreatedAt = setting.CreatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating setting");
+            return StatusCode(500, new { error = "An error occurred while creating the setting" });
+        }
+    }
+
+    [HttpPut("{key}")]
+    public async Task<IActionResult> Update(string key, [FromBody] UpdateSettingRequest request)
+    {
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var settings = (await settingsRepository.GetAllAsync()).ToList();
+            var setting = settings.FirstOrDefault(s => s.Key == key);
+
+            if (setting == null)
+            {
+                return NotFound(new { error = "Setting not found" });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Value))
+            {
+                setting.Value = request.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Category))
+            {
+                setting.Category = Enum.Parse<SettingCategory>(request.Category);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Description))
+            {
+                setting.Description = request.Description;
+            }
+
+            setting.UpdatedAt = DateTime.UtcNow;
+
+            await settingsRepository.UpdateAsync(setting);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"Setting updated: {setting.Key}");
+
+            return Ok(new SettingDto
+            {
+                Id = setting.Id,
+                Key = setting.Key,
+                Value = setting.Value,
+                Category = setting.Category.ToString(),
+                Description = setting.Description,
+                CreatedAt = setting.CreatedAt,
+                UpdatedAt = setting.UpdatedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error updating setting {key}");
+            return StatusCode(500, new { error = "An error occurred while updating the setting" });
+        }
+    }
+
+    [HttpDelete("{key}")]
+    public async Task<IActionResult> Delete(string key)
+    {
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var settings = (await settingsRepository.GetAllAsync()).ToList();
+            var setting = settings.FirstOrDefault(s => s.Key == key);
+
+            if (setting == null)
+            {
+                return NotFound(new { error = "Setting not found" });
+            }
+
+            await settingsRepository.DeleteAsync(setting);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"Setting deleted: {setting.Key}");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error deleting setting {key}");
+            return StatusCode(500, new { error = "An error occurred while deleting the setting" });
+        }
+    }
+
+    [HttpPost("batch")]
+    public async Task<IActionResult> CreateOrUpdateBatch([FromBody] List<CreateSettingRequest> requests)
+    {
+        try
+        {
+            var settingsRepository = _unitOfWork.GetRepository<RegistrySetting>();
+            var existingSettings = (await settingsRepository.GetAllAsync()).ToList();
+
+            var results = new List<SettingDto>();
+
+            foreach (var request in requests)
+            {
+                if (string.IsNullOrWhiteSpace(request.Key) || string.IsNullOrWhiteSpace(request.Value))
+                {
+                    continue;
+                }
+
+                var existing = existingSettings.FirstOrDefault(s => s.Key == request.Key);
+                RegistrySetting setting;
+
+                if (existing != null)
+                {
+                    existing.Value = request.Value;
+                    if (!string.IsNullOrWhiteSpace(request.Category))
+                    {
+                        existing.Category = Enum.Parse<SettingCategory>(request.Category);
+                    }
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    await settingsRepository.UpdateAsync(existing);
+                    setting = existing;
+                }
+                else
+                {
+                    setting = new RegistrySetting
+                    {
+                        Key = request.Key,
+                        Value = request.Value,
+                        Category = Enum.Parse<SettingCategory>(request.Category ?? "General"),
+                        Description = request.Description
+                    };
+                    await settingsRepository.AddAsync(setting);
+                }
+
+                results.Add(new SettingDto
+                {
+                    Id = setting.Id,
+                    Key = setting.Key,
+                    Value = setting.Value,
+                    Category = setting.Category.ToString(),
+                    Description = setting.Description,
+                    CreatedAt = setting.CreatedAt,
+                    UpdatedAt = setting.UpdatedAt
+                });
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"Batch settings operation completed for {results.Count} settings");
+
+            return Ok(new { created = results.Count, settings = results });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in batch settings operation");
+            return StatusCode(500, new { error = "An error occurred during batch operation" });
+        }
+    }
+}
+
+// DTOs
+public class CreateSettingRequest
+{
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+    public string? Category { get; set; } = "General";
+    public string? Description { get; set; }
+}
+
+public class UpdateSettingRequest
+{
+    public string? Value { get; set; }
+    public string? Category { get; set; }
+    public string? Description { get; set; }
+}
+
+public class SettingDto
+{
+    public Guid Id { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}

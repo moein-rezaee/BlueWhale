@@ -30,6 +30,10 @@ public class RegistryDbContext : DbContext
                 .WithOne(a => a.User)
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.AccessControls)
+                .WithOne(a => a.User)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ActivityLog>(entity =>
@@ -38,6 +42,8 @@ public class RegistryDbContext : DbContext
             entity.Property(e => e.Action).IsRequired().HasMaxLength(256);
             entity.Property(e => e.ResourceType).IsRequired().HasMaxLength(256);
             entity.Property(e => e.ResourceId).HasMaxLength(500);
+            entity.Property(e => e.ResourceName).HasMaxLength(500);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);
             entity.HasIndex(e => new { e.UserId, e.Timestamp });
             entity.HasIndex(e => e.Timestamp);
         });
@@ -47,6 +53,7 @@ public class RegistryDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Key).IsRequired().HasMaxLength(256);
             entity.Property(e => e.Value).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(1000);
             entity.HasIndex(e => new { e.Key, e.Category }).IsUnique();
         });
 
@@ -55,6 +62,7 @@ public class RegistryDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Repository).IsRequired().HasMaxLength(256);
             entity.HasIndex(e => new { e.UserId, e.Repository });
+            entity.HasIndex(e => e.IsActive);
         });
     }
 }
