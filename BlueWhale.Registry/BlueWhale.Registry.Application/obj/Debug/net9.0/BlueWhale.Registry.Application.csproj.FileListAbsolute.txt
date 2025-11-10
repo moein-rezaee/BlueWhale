@@ -1,0 +1,16 @@
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/bin/Debug/net9.0/BlueWhale.Registry.Application.deps.json
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/bin/Debug/net9.0/BlueWhale.Registry.Application.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/bin/Debug/net9.0/BlueWhale.Registry.Application.pdb
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/bin/Debug/net9.0/BlueWhale.Registry.Domain.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/bin/Debug/net9.0/BlueWhale.Registry.Domain.pdb
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.csproj.AssemblyReference.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.AssemblyInfoInputs.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.AssemblyInfo.cs
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.csproj.CoreCompileInputs.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.sourcelink.json
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhal.5498CFEC.Up2Date
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/refint/BlueWhale.Registry.Application.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/BlueWhale.Registry.Application.pdb
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/obj/Debug/net9.0/ref/BlueWhale.Registry.Application.dll

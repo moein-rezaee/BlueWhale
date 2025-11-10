@@ -1,0 +1,13 @@
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/bin/Debug/net9.0/BlueWhale.Registry.Domain.deps.json
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/bin/Debug/net9.0/BlueWhale.Registry.Domain.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/bin/Debug/net9.0/BlueWhale.Registry.Domain.pdb
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.csproj.AssemblyReference.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.AssemblyInfoInputs.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.AssemblyInfo.cs
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.csproj.CoreCompileInputs.cache
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.sourcelink.json
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/refint/BlueWhale.Registry.Domain.dll
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/BlueWhale.Registry.Domain.pdb
+/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Domain/obj/Debug/net9.0/ref/BlueWhale.Registry.Domain.dll

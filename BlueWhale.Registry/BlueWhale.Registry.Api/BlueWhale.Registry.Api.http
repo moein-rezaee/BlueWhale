@@ -1,0 +1,6 @@
+@BlueWhale.Registry.Api_HostAddress = http://localhost:5229
+
+GET {{BlueWhale.Registry.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

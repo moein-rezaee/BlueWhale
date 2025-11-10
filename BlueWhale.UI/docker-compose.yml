@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bluewhale-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NUXT_PUBLIC_API_BASE=http://localhost:5260/v1/api
+    depends_on:
+      - registry-api
+    networks:
+      - online-shop
+
+  registry-api:
+    build:
+      context: ../
+      dockerfile: BlueWhale.Registry/BlueWhale.Registry.Api/Dockerfile
+    container_name: bluewhale-registry-api
+    ports:
+      - "5260:5260"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5260
+      - Registry__RegistryUrl=http://registry:5000
+      - Jwt__Secret=your-secret-key-change-in-production
+    depends_on:
+      - registry
+    networks:
+      - online-shop
+    volumes:
+      - ../BlueWhale.Registry/BlueWhale.Registry.Api/registry.db:/app/registry.db
+
+  registry:
+    image: registry:2.8.3
+    container_name: docker-registry
+    ports:
+      - "5000:5000"
+    environment:
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+    volumes:
+      - registry_data:/var/lib/registry
+    networks:
+      - online-shop
+
+volumes:
+  registry_data:
+    driver: local
+
+networks:
+  online-shop:
+    driver: bridge

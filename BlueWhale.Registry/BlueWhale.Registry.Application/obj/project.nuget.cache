@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "gZM3GosM2p4=",
+  "success": true,
+  "projectFilePath": "/Volumes/Personal/Projects/BlueWhale/BlueWhale.Registry/BlueWhale.Registry.Application/BlueWhale.Registry.Application.csproj",
+  "expectedPackageFiles": [
+    "/Users/moeinrezaee/.nuget/packages/automapper/13.0.1/automapper.13.0.1.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/fluentvalidation/11.9.2/fluentvalidation.11.9.2.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/mediatr/12.2.0/mediatr.12.2.0.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/mediatr.contracts/2.0.1/mediatr.contracts.2.0.1.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.0/microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/microsoft.extensions.options/6.0.0/microsoft.extensions.options.6.0.0.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/microsoft.extensions.primitives/6.0.0/microsoft.extensions.primitives.6.0.0.nupkg.sha512",
+    "/Users/moeinrezaee/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
