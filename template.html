@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Registry Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100" x-data="dockerRegistry()">
+    
+    <!-- Sidebar -->
+    <div class="fixed left-0 top-0 h-screen w-64 bg-gray-900 border-r border-gray-800 z-50 flex flex-col">
+        <div class="p-6 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fab fa-docker text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white">Registry Panel</h1>
+                    <p class="text-xs text-gray-400">v2.8.3</p>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <a @click="currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-chart-line w-5"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a @click="currentView = 'repositories'" :class="currentView === 'repositories' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-box w-5"></i>
+                <span class="font-medium">Repositories</span>
+            </a>
+            <a @click="currentView = 'images'" :class="currentView === 'images' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-layer-group w-5"></i>
+                <span class="font-medium">Images</span>
+            </a>
+            <a @click="currentView = 'tags'" :class="currentView === 'tags' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-tags w-5"></i>
+                <span class="font-medium">Tags</span>
+            </a>
+            <a @click="currentView = 'security'" :class="currentView === 'security' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-shield-alt w-5"></i>
+                <span class="font-medium">Security</span>
+            </a>
+            <a @click="currentView = 'storage'" :class="currentView === 'storage' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-hdd w-5"></i>
+                <span class="font-medium">Storage</span>
+            </a>
+            <a @click="currentView = 'access'" :class="currentView === 'access' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-users-cog w-5"></i>
+                <span class="font-medium">Access Control</span>
+            </a>
+            <a @click="currentView = 'logs'" :class="currentView === 'logs' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="font-medium">Activity Logs</span>
+            </a>
+            <a @click="currentView = 'settings'" :class="currentView === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'" class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all">
+                <i class="fas fa-cog w-5"></i>
+                <span class="font-medium">Settings</span>
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-800">
+            <div class="flex items-center gap-3 px-4 py-3 bg-gray-800 rounded-lg">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-bold">
+                    AD
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-white">Admin User</p>
+                    <p class="text-xs text-gray-400">admin@registry.local</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 min-h-screen">
+        
+        <!-- Header -->
+        <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-40">
+            <div class="px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 max-w-xl">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" placeholder="Search repositories, images and tags..." class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-12 pr-4 py-3 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button class="relative p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>New Repository</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard View -->
+        <div x-show="currentView === 'dashboard'" class="p-8">
+            
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-blue-500/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-box text-blue-500 text-xl"></i>
+                        </div>
+                        <span class="text-xs text-green-500 bg-green-500/10 px-2 py-1 rounded-full">+12%</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Total Repositories</p>
+                    <p class="text-3xl font-bold text-white">247</p>
+                </div>
+                
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-purple-500/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-layer-group text-purple-500 text-xl"></i>
+                        </div>
+                        <span class="text-xs text-green-500 bg-green-500/10 px-2 py-1 rounded-full">+8%</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Total Images</p>
+                    <p class="text-3xl font-bold text-white">1,842</p>
+                </div>
+                
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-orange-500/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-hdd text-orange-500 text-xl"></i>
+                        </div>
+                        <span class="text-xs text-red-500 bg-red-500/10 px-2 py-1 rounded-full">78%</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Storage Used</p>
+                    <p class="text-3xl font-bold text-white">387 GB</p>
+                </div>
+                
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-all">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-download text-green-500 text-xl"></i>
+                        </div>
+                        <span class="text-xs text-green-500 bg-green-500/10 px-2 py-1 rounded-full">+24%</span>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Pulls Today</p>
+                    <p class="text-3xl font-bold text-white">12.4K</p>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">Pull Statistics (Last 7 Days)</h3>
+                    <div class="h-80">
+                        <canvas id="downloadsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">Storage Distribution</h3>
+                    <div class="h-80">
+                        <canvas id="storageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-white">Recent Activity</h3>
+                    <button class="text-sm text-blue-500 hover:text-blue-400">View All</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all">
+                        <div class="w-10 h-10 bg-green-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-upload text-green-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">New image pushed</p>
+                            <p class="text-sm text-gray-400">myapp/backend:v2.3.1</p>
+                        </div>
+                        <span class="text-xs text-gray-500">2 minutes ago</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all">
+                        <div class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-download text-blue-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">Image pulled</p>
+                            <p class="text-sm text-gray-400">nginx:alpine by user@company.com</p>
+                        </div>
+                        <span class="text-xs text-gray-500">5 minutes ago</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all">
+                        <div class="w-10 h-10 bg-red-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-trash text-red-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">Tag deleted</p>
+                            <p class="text-sm text-gray-400">myapp/frontend:v1.2.0</p>
+                        </div>
+                        <span class="text-xs text-gray-500">15 minutes ago</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all">
+                        <div class="w-10 h-10 bg-yellow-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-white font-medium">Security alert</p>
+                            <p class="text-sm text-gray-400">Vulnerability detected in postgres:13</p>
+                        </div>
+                        <span class="text-xs text-gray-500">1 hour ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Repositories View -->
+        <div x-show="currentView === 'repositories'" class="p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white">Repositories</h2>
+                <div class="flex items-center gap-3">
+                    <select class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                        <option>All Repositories</option>
+                        <option>Public</option>
+                        <option>Private</option>
+                    </select>
+                    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
+                        <span>New Repository</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <template x-for="repo in repositories" :key="repo.name">
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-blue-500/50 transition-all cursor-pointer">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-white"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-bold" x-text="repo.name"></h3>
+                                    <p class="text-xs text-gray-400" x-text="repo.namespace"></p>
+                                </div>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full" :class="repo.visibility === 'public' ? 'bg-green-500/10 text-green-500' : 'bg-orange-500/10 text-orange-500'" x-text="repo.visibility === 'public' ? 'Public' : 'Private'"></span>
+                        </div>
+                        
+                        <p class="text-sm text-gray-400 mb-4 line-clamp-2" x-text="repo.description"></p>
+                        
+                        <div class="flex items-center gap-4 text-xs text-gray-400 mb-4">
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-tag"></i>
+                                <span x-text="repo.tags"></span> tags
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-download"></i>
+                                <span x-text="repo.pulls"></span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <i class="fas fa-hdd"></i>
+                                <span x-text="repo.size"></span>
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <button class="flex-1 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-all">
+                                <i class="fas fa-eye mr-1"></i>
+                                View
+                            </button>
+                            <button class="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm transition-all">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Images View -->
+        <div x-show="currentView === 'images'" class="p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white">Images</h2>
+                <div class="flex items-center gap-3">
+                    <input type="text" placeholder="Search images..." class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-800/50">
+                        <tr>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Image Name</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Tag</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Size</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Architecture</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Created</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <template x-for="image in images" :key="image.id">
+                            <tr class="hover:bg-gray-800/30 transition-all">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-layer-group text-blue-500"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-white font-medium" x-text="image.name"></p>
+                                            <p class="text-xs text-gray-400" x-text="image.digest.substring(0, 20) + '...'"></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 bg-gray-800 text-blue-400 rounded-full text-xs font-medium" x-text="image.tag"></span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-300" x-text="image.size"></td>
+                                <td class="px-6 py-4">
+                                    <span class="text-gray-300" x-text="image.arch"></span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-400 text-sm" x-text="image.created"></td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <button class="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-400 hover:bg-gray-700 rounded-lg transition-all">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                        <button class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Security View -->
+        <div x-show="currentView === 'security'" class="p-8">
+            <h2 class="text-2xl font-bold text-white mb-6">Security Scanning</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-gray-900 border border-red-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Critical Vulnerabilities</p>
+                    <p class="text-3xl font-bold text-red-500">12</p>
+                </div>
+                
+                <div class="bg-gray-900 border border-orange-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Medium Vulnerabilities</p>
+                    <p class="text-3xl font-bold text-orange-500">47</p>
+                </div>
+                
+                <div class="bg-gray-900 border border-yellow-800 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-info-circle text-yellow-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-1">Low Vulnerabilities</p>
+                    <p class="text-3xl font-bold text-yellow-500">128</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                <div class="p-6 border-b border-gray-800">
+                    <h3 class="text-lg font-bold text-white">Detected Vulnerabilities</h3>
+                </div>
+                <table class="w-full">
+                    <thead class="bg-gray-800/50">
+                        <tr>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Image</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">CVE ID</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Severity</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Package</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Current Version</th>
+                            <th class="text-left px-6 py-4 text-sm font-semibold text-gray-300">Fixed Version</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        <tr class="hover:bg-gray-800/30 transition-all">
+                            <td class="px-6 py-4 text-white font-medium">myapp/backend:v2.1.0</td>
+                            <td class="px-6 py-4 text-blue-400">CVE-2024-1234</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-medium">Critical</span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-300">openssl</td>
+                            <td class="px-6 py-4 text-gray-400">1.1.1k</td>
+                            <td class="px-6 py-4 text-green-400">1.1.1w</td>
+                        </tr>
+                        <tr class="hover:bg-gray-800/30 transition-all">
+                            <td class="px-6 py-4 text-white font-medium">nginx:alpine</td>
+                            <td class="px-6 py-4 text-blue-400">CVE-2024-5678</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-orange-500/10 text-orange-500 rounded-full text-xs font-medium">Medium</span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-300">curl</td>
+                            <td class="px-6 py-4 text-gray-400">7.79.1</td>
+                            <td class="px-6 py-4 text-green-400">8.0.1</td>
+                        </tr>
+                        <tr class="hover:bg-gray-800/30 transition-all">
+                            <td class="px-6 py-4 text-white font-medium">postgres:13</td>
+                            <td class="px-6 py-4 text-blue-400">CVE-2024-9012</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded-full text-xs font-medium">Low</span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-300">libpq</td>
+                            <td class="px-6 py-4 text-gray-400">13.8</td>
+                            <td class="px-6 py-4 text-green-400">13.14</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Storage View -->
+        <div x-show="currentView === 'storage'" class="p-8">
+            <h2 class="text-2xl font-bold text-white mb-6">Storage Management</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">Storage Usage</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm text-gray-400">Used Storage</span>
+                                <span class="text-sm font-medium text-white">387 GB / 500 GB</span>
+                            </div>
+                            <div class="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-blue-500 to-purple-600" style="width: 77.4%"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 pt-4">
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <p class="text-xs text-gray-400 mb-1">Images</p>
+                                <p class="text-xl font-bold text-white">312 GB</p>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-lg p-4">
+                                <p class="text-xs text-gray-400 mb-1">Layers</p>
+                                <p class="text-xl font-bold text-white">75 GB</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">Largest Repositories</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-500"></i>
+                                </div>
+                                <span class="text-white font-medium">myapp/backend</span>
+                            </div>
+                            <span class="text-gray-400">87 GB</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-purple-500"></i>
+                                </div>
+                                <span class="text-white font-medium">ml-models</span>
+                            </div>
+                            <span class="text-gray-400">64 GB</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-green-600/20 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-green-500"></i>
+                                </div>
+                                <span class="text-white font-medium">data-pipeline</span>
+                            </div>
+                            <span class="text-gray-400">52 GB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-white">Garbage Collection</h3>
+                    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all">
+                        Run Cleanup
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Unused Tags</span>
+                            <i class="fas fa-trash text-red-500"></i>
+                        </div>
+                        <p class="text-2xl font-bold text-white mb-1">142</p>
+                        <p class="text-xs text-gray-500">Reclaimable: 23 GB</p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Orphaned Layers</span>
+                            <i class="fas fa-trash text-orange-500"></i>
+                        </div>
+                        <p class="text-2xl font-bold text-white mb-1">87</p>
+                        <p class="text-xs text-gray-500">Reclaimable: 8.4 GB</p>
+                    </div>
+                    <div class="bg-gray-800/50 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Old Manifests</span>
+                            <i class="fas fa-trash text-yellow-500"></i>
+                        </div>
+                        <p class="text-2xl font-bold text-white mb-1">56</p>
+                        <p class="text-xs text-gray-500">Reclaimable: 1.2 GB</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div x-show="currentView === 'settings'" class="p-8">
+            <h2 class="text-2xl font-bold text-white mb-6">Registry Settings</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">General Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Registry Name</label>
+                            <input type="text" value="registry.company.local" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Port</label>
+                            <input type="text" value="5000" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Maximum Storage</label>
+                            <input type="text" value="500 GB" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-6">Security Settings</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                            <div>
+                                <p class="text-white font-medium">Two-Factor Authentication</p>
+                                <p class="text-sm text-gray-400">Enhance account security</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                            <div>
+                                <p class="text-white font-medium">Automatic Security Scanning</p>
+                                <p class="text-sm text-gray-400">Scan images on push</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                            <div>
+                                <p class="text-white font-medium">Rate Limiting</p>
+                                <p class="text-sm text-gray-400">Prevent abuse</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function dockerRegistry() {
+            return {
+                currentView: 'dashboard',
+                repositories: [
+                    { name: 'backend', namespace: 'myapp', description: 'Main backend service application', tags: 24, pulls: '12.4K', size: '87 GB', visibility: 'private' },
+                    { name: 'frontend', namespace: 'myapp', description: 'React user interface', tags: 18, pulls: '8.2K', size: '42 GB', visibility: 'public' },
+                    { name: 'nginx', namespace: 'infrastructure', description: 'Web server and reverse proxy', tags: 12, pulls: '15.7K', size: '12 GB', visibility: 'public' },
+                    { name: 'postgres', namespace: 'database', description: 'Primary database', tags: 8, pulls: '6.3K', size: '34 GB', visibility: 'private' },
+                    { name: 'redis', namespace: 'cache', description: 'Cache and message queue system', tags: 15, pulls: '9.1K', size: '8 GB', visibility: 'private' },
+                    { name: 'ml-model', namespace: 'ai', description: 'Machine learning models', tags: 32, pulls: '4.2K', size: '124 GB', visibility: 'private' }
+                ],
+                images: [
+                    { id: 1, name: 'myapp/backend', tag: 'v2.3.1', digest: 'sha256:abc123def456...', size: '342 MB', arch: 'amd64', created: '2 hours ago' },
+                    { id: 2, name: 'myapp/frontend', tag: 'v1.8.0', digest: 'sha256:def789ghi012...', size: '128 MB', arch: 'amd64', created: '5 hours ago' },
+                    { id: 3, name: 'nginx', tag: 'alpine', digest: 'sha256:ghi345jkl678...', size: '24 MB', arch: 'amd64', created: '1 day ago' },
+                    { id: 4, name: 'postgres', tag: '13', digest: 'sha256:jkl901mno234...', size: '314 MB', arch: 'amd64', created: '2 days ago' },
+                    { id: 5, name: 'redis', tag: '7-alpine', digest: 'sha256:mno567pqr890...', size: '32 MB', arch: 'amd64', created: '3 days ago' }
+                ],
+                init() {
+                    this.$nextTick(() => {
+                        this.initCharts();
+                    });
+                },
+                initCharts() {
+                    // Downloads Chart
+                    const downloadsCtx = document.getElementById('downloadsChart');
+                    if (downloadsCtx) {
+                        new Chart(downloadsCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                                datasets: [{
+                                    label: 'Pulls',
+                                    data: [8200, 9500, 11200, 10800, 12400, 11900, 13100],
+                                    borderColor: 'rgb(59, 130, 246)',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    tension: 0.4,
+                                    fill: true
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                        ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: 'rgba(255, 255, 255, 0.5)' }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Storage Chart
+                    const storageCtx = document.getElementById('storageChart');
+                    if (storageCtx) {
+                        new Chart(storageCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Images', 'Layers', 'Manifests', 'Free Space'],
+                                datasets: [{
+                                    data: [312, 75, 12, 101],
+                                    backgroundColor: [
+                                        'rgb(59, 130, 246)',
+                                        'rgb(168, 85, 247)',
+                                        'rgb(249, 115, 22)',
+                                        'rgba(255, 255, 255, 0.1)'
+                                    ],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { color: 'rgba(255, 255, 255, 0.7)', padding: 20 }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
