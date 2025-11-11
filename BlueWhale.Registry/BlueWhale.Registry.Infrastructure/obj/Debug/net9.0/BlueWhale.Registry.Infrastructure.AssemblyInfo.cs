@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BlueWhale.Registry.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+11cc454636084d75c7af732528e25079b546c2e5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+255f3d94c93102c7ca7ef2b1e9f4ae36c6d80d26")]
 [assembly: System.Reflection.AssemblyProductAttribute("BlueWhale.Registry.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BlueWhale.Registry.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

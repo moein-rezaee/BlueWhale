@@ -6,7 +6,6 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN ls -la assets/css/
 RUN npm run build
 
 # Production stage

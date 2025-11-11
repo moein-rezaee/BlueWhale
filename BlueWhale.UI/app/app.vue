@@ -9,6 +9,9 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useTheme } from '~/composables/useTheme'
+
+const { initTheme } = useTheme()
 
 useHead({
   title: 'BlueWhale - Docker Registry Manager',
@@ -29,6 +32,7 @@ useHead({
 })
 
 onMounted(() => {
+  initTheme()
   // Ensure Font Awesome is loaded
   const link = document.querySelector('link[href*="font-awesome"]')
   if (link && !window.FontAwesome) {

@@ -118,6 +118,19 @@
                 <i :class="['fas', isRefreshing ? 'fa-spinner fa-spin' : 'fa-sync-alt']"></i>
                 <span class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-700 text-white text-xs py-1 px-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">Refresh</span>
               </button>
+              
+              <!-- Theme Toggle -->
+              <button 
+                @click="toggleTheme"
+                class="p-2 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all duration-200 group relative"
+                :title="theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+              >
+                <i :class="theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon'"></i>
+                <span class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-700 text-white text-xs py-1 px-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                  {{ theme === 'dark' ? 'Light Mode' : 'Dark Mode' }}
+                </span>
+              </button>
+              
               <button 
                 class="relative p-2 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-all duration-200"
                 title="Notifications"
@@ -142,11 +155,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTheme } from '~/composables/useTheme'
 
 const route = useRoute()
 const isRefreshing = ref(false)
+const { theme, toggleTheme, initTheme } = useTheme()
+
+onMounted(() => {
+  initTheme()
+})
 
 const isActive = (path: string) => {
   if (path === '/') {
